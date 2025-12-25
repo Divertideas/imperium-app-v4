@@ -17,6 +17,11 @@ export const EMPIRES: EmpireConfig[] = [
   { id: 'miradu', name: 'Miradu', natalPlanetNumber: 15 }
 ];
 
+// Helper used by UI to display a friendly empire name.
+export function empireName(id: EmpireId): string {
+  return EMPIRES.find(e => e.id === id)?.name ?? String(id);
+}
+
 export type GameSetup = {
   playerEmpireId: EmpireId;
   rivalEmpireIds: EmpireId[];
