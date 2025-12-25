@@ -1,7 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useGameStore } from '../store/gameStore';
+import type { EmpireId } from '../store/types';
 
 type PlanetOwner = string;
+
+function isEmpireId(v: unknown): v is EmpireId {
+  return v === 'primus' || v === 'xilnah' || v === 'navui' || v === 'tora' || v === 'miradu';
+}
 
 function PlanetNodesPanel({
   planetId,
@@ -35,9 +40,8 @@ function PlanetNodesPanel({
     // Activating a node costs 1 credit. Deactivating never refunds.
     if (nextValue) {
       const currentEmpire = store.getCurrentEmpire();
-      const owner: any = (store.planets[planetId]?.owner ?? 'free') as any;
-      const payEmpire: any = (owner !== 'free' && owner !== 'destroyed') ? owner : currentEmpire;
-      if (!payEmpire) return;
+      const owner = store.planets[planetId]?.owner ?? 'free';
+      const payEmpire: EmpireId = isEmpireId(owner) ? owner : currentEmpire;
       const credits = store.credits[payEmpire] ?? 0;
       if (credits < 1) {
         setNotice('No hay créditos suficientes para activar este nodo.');
