@@ -36,10 +36,10 @@ export function DiceD6() {
       </button>
       <div className="dice-result">
         <div className="row wrap" style={{ gap: 12 }}>
-          <span className="muted">Último:</span>
-          <strong className="dice-num">{rolling ? (animNum ?? last ?? '—') : (last ?? '—')}</strong>
           <span className="muted">Anterior:</span>
           <strong className="dice-num">{prev ?? '—'}</strong>
+          <span className="muted">Último:</span>
+          <strong className="dice-num">{rolling ? (animNum ?? last ?? '—') : (last ?? '—')}</strong>
         </div>
       </div>
     </div>

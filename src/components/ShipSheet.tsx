@@ -31,8 +31,9 @@ function UpgradeTrack(props: {
   title: string;
   track: { attackNodes: number; defenseNodes: number; attackBonusNote: string; defenseBonusNote: string };
   onChange: (patch: Partial<typeof props.track>) => void;
+  onSpendOneCredit: () => boolean;
 }) {
-  const { title, track, onChange } = props;
+  const { title, track, onChange, onSpendOneCredit } = props;
   return (
     <div className="subpanel">
       <h4>{title}</h4>
@@ -43,7 +44,16 @@ function UpgradeTrack(props: {
           <div className="row">
             <button type="button" className="mini" onClick={() => onChange({ attackNodes: Math.max(0, track.attackNodes - 1) })}>−</button>
             <span className="value">{track.attackNodes}</span>
-            <button type="button" className="mini" onClick={() => onChange({ attackNodes: track.attackNodes + 1 })}>+</button>
+            <button
+              type="button"
+              className="mini"
+              onClick={() => {
+                if (!onSpendOneCredit()) return;
+                onChange({ attackNodes: track.attackNodes + 1 });
+              }}
+            >
+              +
+            </button>
           </div>
         </div>
 
@@ -52,7 +62,16 @@ function UpgradeTrack(props: {
           <div className="row">
             <button type="button" className="mini" onClick={() => onChange({ defenseNodes: Math.max(0, track.defenseNodes - 1) })}>−</button>
             <span className="value">{track.defenseNodes}</span>
-            <button type="button" className="mini" onClick={() => onChange({ defenseNodes: track.defenseNodes + 1 })}>+</button>
+            <button
+              type="button"
+              className="mini"
+              onClick={() => {
+                if (!onSpendOneCredit()) return;
+                onChange({ defenseNodes: track.defenseNodes + 1 });
+              }}
+            >
+              +
+            </button>
           </div>
         </div>
 
@@ -90,6 +109,18 @@ export function ShipSheet(props: {
   }, [shipId, store.empireFleetSlots]);
 
   if (!ship) return null;
+
+  const spendOneCredit = () => {
+    const emp = ship.owner;
+    const c = store.credits[emp] ?? 0;
+    if (c < 1) {
+      setMsg('No hay créditos suficientes para activar un nodo.');
+      return false;
+    }
+    store.incCredits(emp, -1);
+    setMsg('');
+    return true;
+  };
 
   const onBuy = () => {
     const res = store.buyShip(shipId);
@@ -150,12 +181,14 @@ export function ShipSheet(props: {
         title="Nivel 1"
         track={ship.level1}
         onChange={(patch) => store.saveShip(shipId, { level1: { ...ship.level1, ...patch } })}
+        onSpendOneCredit={spendOneCredit}
       />
 
       <UpgradeTrack
         title="Nivel 2"
         track={ship.level2}
         onChange={(patch) => store.saveShip(shipId, { level2: { ...ship.level2, ...patch } })}
+        onSpendOneCredit={spendOneCredit}
       />
 
       <div className="subpanel">
@@ -176,10 +209,28 @@ export function ShipSheet(props: {
             <input
               type="number"
               value={ship.specialNodes ?? 0}
-              onChange={(e) => store.saveShip(shipId, { specialNodes: e.target.value === '' ? 0 : Math.max(0, Math.floor(Number(e.target.value))) })}
+              onChange={(e) => {
+                const next = e.target.value === '' ? 0 : Math.max(0, Math.floor(Number(e.target.value)));
+                const prev = ship.specialNodes ?? 0;
+                const diff = next - prev;
+                if (diff > 0) {
+                  const emp = ship.owner;
+                  const credits = store.credits[emp] ?? 0;
+                  if (credits < diff) {
+                    setMsg('No hay créditos suficientes para activar tantos nodos.');
+                    return;
+                  }
+                  store.incCredits(emp, -diff);
+                  setMsg('');
+                }
+                store.saveShip(shipId, { specialNodes: next });
+              }}
               style={{ maxWidth: 120 }}
             />
-            <button className="ghost" type="button" onClick={() => store.saveShip(shipId, { specialNodes: (ship.specialNodes ?? 0) + 1 })}>+</button>
+            <button className="ghost" type="button" onClick={() => {
+              if (!spendOneCredit()) return;
+              store.saveShip(shipId, { specialNodes: (ship.specialNodes ?? 0) + 1 });
+            }}>+</button>
           </div>
           <small className="muted">Manual: indica cuántos nodos se han activado para poder usar esta habilidad.</small>
         </label>

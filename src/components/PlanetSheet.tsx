@@ -14,6 +14,7 @@ function PlanetNodesPanel({
   const planet = store.planets[planetId];
   const [editMode, setEditMode] = useState(false);
   const [imgOk, setImgOk] = useState(true);
+  const [notice, setNotice] = useState<string>('');
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
 
@@ -28,7 +29,27 @@ function PlanetNodesPanel({
   const active = planet?.nodeActive ?? [];
 
   const toggleActive = (idx: number) => {
-    const next = points.map((_, i) => (i === idx ? !Boolean(active[i]) : Boolean(active[i])));
+    const currently = Boolean(active[idx]);
+    const nextValue = !currently;
+
+    // Activating a node costs 1 credit. Deactivating never refunds.
+    if (nextValue) {
+      const currentEmpire = store.getCurrentEmpire();
+      const owner: any = (store.planets[planetId]?.owner ?? 'free') as any;
+      const payEmpire: any = (owner !== 'free' && owner !== 'destroyed') ? owner : currentEmpire;
+      if (!payEmpire) return;
+      const credits = store.credits[payEmpire] ?? 0;
+      if (credits < 1) {
+        setNotice('No hay créditos suficientes para activar este nodo.');
+        return;
+      }
+      store.incCredits(payEmpire, -1);
+    }
+
+    // Clearing a node never refunds credits.
+    setNotice('');
+
+    const next = points.map((_, i) => (i === idx ? nextValue : Boolean(active[i])));
     store.savePlanet(planetId, { nodeActive: next });
   };
 
@@ -135,6 +156,8 @@ function PlanetNodesPanel({
           )}
         </div>
       ) : null}
+
+      {notice ? <div className="danger small" style={{ marginTop: 8 }}>{notice}</div> : null}
     </div>
   );
 }

@@ -79,7 +79,11 @@ export default function CombatPlanetaryPage() {
           <div className="grid two">
             <label className="field">
               <span>Nave 1</span>
-              <select value={shipA} onChange={(e) => setShipA(e.target.value)}>
+              <select value={shipA} onChange={(e) => {
+                const v = e.target.value;
+                setShipA(v);
+                if (v && v === shipB) setShipB('');
+              }}>
                 <option value="">(sin nave)</option>
                 {availableShips.map(id => {
                   const sh = store.ships[id];
@@ -90,7 +94,11 @@ export default function CombatPlanetaryPage() {
 
             <label className="field">
               <span>Nave 2</span>
-              <select value={shipB} onChange={(e) => setShipB(e.target.value)} disabled={availableShips.length < 2}>
+              <select value={shipB} onChange={(e) => {
+                const v = e.target.value;
+                if (v && v === shipA) return;
+                setShipB(v);
+              }} disabled={availableShips.length < 2}>
                 <option value="">(sin nave)</option>
                 {availableShips.filter(id => id !== shipA).map(id => {
                   const sh = store.ships[id];

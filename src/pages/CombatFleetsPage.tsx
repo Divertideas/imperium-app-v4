@@ -107,7 +107,11 @@ export default function CombatFleetsPage() {
           <div className="grid two">
             <label className="field">
               <span>Nave 1</span>
-              <select value={myA} onChange={(e) => setMyA(e.target.value)}>
+              <select value={myA} onChange={(e) => {
+                const v = e.target.value;
+                setMyA(v);
+                if (v && v === myB) setMyB('');
+              }}>
                 <option value="">(sin nave)</option>
                 {playerShips.map(id => {
                   const sh = store.ships[id];
@@ -117,7 +121,11 @@ export default function CombatFleetsPage() {
             </label>
             <label className="field">
               <span>Nave 2</span>
-              <select value={myB} onChange={(e) => setMyB(e.target.value)} disabled={playerShips.length < 2}>
+              <select value={myB} onChange={(e) => {
+                const v = e.target.value;
+                if (v && v === myA) return;
+                setMyB(v);
+              }} disabled={playerShips.length < 2}>
                 <option value="">(sin nave)</option>
                 {playerShips.filter(id => id !== myA).map(id => {
                   const sh = store.ships[id];
@@ -158,7 +166,11 @@ export default function CombatFleetsPage() {
           <div className="grid two">
             <label className="field">
               <span>Nave rival 1 (ordenadas por potencia)</span>
-              <select value={theirA} onChange={(e) => setTheirA(e.target.value)}>
+              <select value={theirA} onChange={(e) => {
+                const v = e.target.value;
+                setTheirA(v);
+                if (v && v === theirB) setTheirB('');
+              }}>
                 <option value="">(sin nave)</option>
                 {targetShipsSorted.map(id => {
                   const sh = store.ships[id];
@@ -168,7 +180,11 @@ export default function CombatFleetsPage() {
             </label>
             <label className="field">
               <span>Nave rival 2</span>
-              <select value={theirB} onChange={(e) => setTheirB(e.target.value)} disabled={targetShipsSorted.length < 2}>
+              <select value={theirB} onChange={(e) => {
+                const v = e.target.value;
+                if (v && v === theirA) return;
+                setTheirB(v);
+              }} disabled={targetShipsSorted.length < 2}>
                 <option value="">(sin nave)</option>
                 {targetShipsSorted.filter(id => id !== theirA).map(id => {
                   const sh = store.ships[id];

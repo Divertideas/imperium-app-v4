@@ -443,8 +443,23 @@ export const useGameStore = create<GameState>()(
         const s = get();
         const planet = s.planets[planetId];
         if (!planet) return;
-        set((st) => ({
-          planets: { ...st.planets, [planetId]: { ...planet, destroyedPermanently: destroyed, owner: destroyed ? 'destroyed' : planet.owner } }
+        if (!destroyed) {
+          set((st) => ({
+            planets: { ...st.planets, [planetId]: { ...planet, destroyedPermanently: false } }
+          }));
+          return;
+        }
+
+        // If a planet is permanently destroyed, it no longer occupies a slot in any empire sheet.
+        const nextEmpirePlanetSlots = { ...s.empirePlanetSlots };
+        for (const emp of EMPIRES) {
+          const prevSlots = [...(nextEmpirePlanetSlots[emp.id] ?? [])];
+          nextEmpirePlanetSlots[emp.id] = prevSlots.map((x) => (x === planetId ? null : x));
+        }
+
+        set(() => ({
+          empirePlanetSlots: nextEmpirePlanetSlots,
+          planets: { ...s.planets, [planetId]: { ...planet, destroyedPermanently: true, owner: 'destroyed' } }
         }));
       },
 
