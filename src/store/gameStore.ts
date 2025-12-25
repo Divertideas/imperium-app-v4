@@ -35,9 +35,13 @@ export type GameState = {
   turnNumber: number;
   winnerEmpireId?: EmpireId;
 
+  // End-of-game / status messages
+  gameOverMessage?: string;
+  eliminatedEmpireId?: EmpireId;
+
   // Global dice (persisted)
-  lastDie?: number;
-  prevDie?: number;
+  die1?: number;
+  die2?: number;
 
   // Manual credit tracking (per empire)
   credits: Record<EmpireId, number>;
@@ -60,12 +64,13 @@ export type GameState = {
   newGame: (setup: GameSetup) => void;
   resetGame: () => void;
 
-  rollDie: () => number;
+  rollDice: () => { die1: number; die2: number };
   setCredits: (empire: EmpireId, value: number) => void;
   incCredits: (empire: EmpireId, delta: number) => void;
 
   startTurnForCurrentEmpire: () => void;
   endTurn: () => void;
+  clearNotice: () => void;
 
   // Ships
   createShipForEmpire: (empire: EmpireId) => string;
@@ -205,8 +210,8 @@ export const useGameStore = create<GameState>()(
       currentTurnIndex: 0,
       turnNumber: 1,
       winnerEmpireId: undefined,
-      lastDie: undefined,
-      prevDie: undefined,
+      die1: undefined,
+      die2: undefined,
       credits: { primus: 0, xilnah: 0, navui: 0, tora: 0, miradu: 0 },
       ships: {},
       planets: {},
@@ -241,8 +246,10 @@ export const useGameStore = create<GameState>()(
           currentTurnIndex: 0,
           turnNumber: 1,
           winnerEmpireId: undefined,
-          lastDie: undefined,
-          prevDie: undefined,
+          die1: undefined,
+          die2: undefined,
+          gameOverMessage: undefined,
+          eliminatedEmpireId: undefined,
           credits: { primus: 0, xilnah: 0, navui: 0, tora: 0, miradu: 0 },
           ships: {},
           planets,
@@ -258,13 +265,23 @@ export const useGameStore = create<GameState>()(
         get().startTurnForCurrentEmpire();
       },
 
-      resetGame: () => set({ setup: undefined, turnOrder: [], currentTurnIndex: 0, turnNumber: 1, winnerEmpireId: undefined }),
+      resetGame: () => set({
+        setup: undefined,
+        turnOrder: [],
+        currentTurnIndex: 0,
+        turnNumber: 1,
+        winnerEmpireId: undefined,
+        gameOverMessage: undefined,
+        eliminatedEmpireId: undefined,
+        die1: undefined,
+        die2: undefined
+      }),
 
-      rollDie: () => {
-        const v = Math.floor(Math.random() * 6) + 1;
-        const s = get();
-        set({ prevDie: s.lastDie, lastDie: v });
-        return v;
+      rollDice: () => {
+        const die1 = Math.floor(Math.random() * 6) + 1;
+        const die2 = Math.floor(Math.random() * 6) + 1;
+        set({ die1, die2 });
+        return { die1, die2 };
       },
 
       setCredits: (empire, value) =>
@@ -289,18 +306,70 @@ export const useGameStore = create<GameState>()(
 
       endTurn: () => {
         const s = get();
-        if (s.winnerEmpireId) return;
+        if (s.winnerEmpireId || s.gameOverMessage) return;
         if (s.turnOrder.length === 0) return;
 
-        // Victory check for the empire that just finished its turn.
+        // Empire that just finished its turn.
         const current = s.turnOrder[s.currentTurnIndex];
+        if (!current) return;
+
+        // 1) Elimination: if the empire ends its turn with 0 planets, it is removed from the game.
+        const ownedNow = countOwnedPlanets(s, current);
+        if (ownedNow <= 0) {
+          const remaining = s.turnOrder.filter(e => e !== current);
+          const playerId = s.setup?.playerEmpireId;
+
+          // If the eliminated empire is the player, game ends immediately.
+          if (playerId && current === playerId) {
+            set({
+              eliminatedEmpireId: current,
+              gameOverMessage: 'Este imperio ha sido eliminado. La partida termina.'
+            });
+            return;
+          }
+
+          // Otherwise, remove empire from turn order and show a message.
+          if (remaining.length === 0) {
+            set({
+              eliminatedEmpireId: current,
+              gameOverMessage: 'Este imperio ha sido eliminado.'
+            });
+            return;
+          }
+
+          // If after elimination only the player remains, player wins.
+          if (playerId && remaining.length === 1 && remaining[0] === playerId) {
+            set({ winnerEmpireId: playerId, gameOverMessage: undefined, eliminatedEmpireId: undefined });
+            return;
+          }
+
+          // Recompute index safely (keep the same numeric index if possible).
+          const oldIndex = s.currentTurnIndex;
+          const newTurnOrder = remaining;
+          const newIndex = Math.min(oldIndex, newTurnOrder.length - 1);
+          set({
+            turnOrder: newTurnOrder,
+            currentTurnIndex: newIndex,
+            eliminatedEmpireId: current,
+            gameOverMessage: 'Este imperio ha sido eliminado.'
+          });
+          // Note: message is shown; user can continue. Next endTurn will proceed.
+          return;
+        }
+
+        // 2) Victory by planets-to-conquer at end of turn.
         const target = s.setup?.planetsToConquer ?? 0;
-        if (target > 0 && current) {
-          const owned = countOwnedPlanets(s, current);
-          if (owned >= target) {
+        if (target > 0) {
+          if (ownedNow >= target) {
             set({ winnerEmpireId: current });
             return;
           }
+        }
+
+        // 3) If only one empire remains at any point, it wins.
+        if (s.turnOrder.length === 1) {
+          set({ winnerEmpireId: s.turnOrder[0] });
+          return;
         }
 
         const nextIndex = (s.currentTurnIndex + 1) % s.turnOrder.length;
@@ -309,6 +378,8 @@ export const useGameStore = create<GameState>()(
         // auto-production for next empire
         setTimeout(() => get().startTurnForCurrentEmpire(), 0);
       },
+
+      clearNotice: () => set({ gameOverMessage: undefined, eliminatedEmpireId: undefined }),
 
       createShipForEmpire: (empire) => {
         const ship = createBlankShip(empire);
