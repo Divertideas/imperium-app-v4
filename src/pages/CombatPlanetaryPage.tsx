@@ -17,6 +17,7 @@ export default function CombatPlanetaryPage() {
 
   const [shipA, setShipA] = useState<string | ''>('');
   const [shipB, setShipB] = useState<string | ''>('');
+  const [planetNumberInput, setPlanetNumberInput] = useState<string>('');
   const [planetNumber, setPlanetNumber] = useState<number | ''>('');
   const [planetId, setPlanetId] = useState<string | ''>('');
   const [msg, setMsg] = useState<string>('');
@@ -124,14 +125,33 @@ export default function CombatPlanetaryPage() {
             <span>Número de planeta</span>
             <input
               type="number"
-              value={planetNumber}
+              value={planetNumberInput}
               onChange={(e) => {
-                const v = e.target.value === '' ? '' : Math.floor(Number(e.target.value));
-                setPlanetNumber(v);
-                if (v !== '') resolvePlanet(v);
+                const v = e.target.value.replace(/[^0-9]/g, '');
+                setPlanetNumberInput(v);
               }}
             />
           </label>
+          <div className="row gap">
+            <button className="btn" onClick={() => {
+              const t = planetNumberInput.trim();
+              if (t === '') {
+                setPlanetNumber('');
+                setPlanetId(null);
+                setMsg('');
+                return;
+              }
+              const num = Math.floor(Number(t));
+              setPlanetNumber(num);
+              resolvePlanet(num);
+            }}>Cargar planeta</button>
+            <button className="btn secondary" onClick={() => {
+              setPlanetNumberInput('');
+              setPlanetNumber('');
+              setPlanetId(null);
+              setMsg('');
+            }}>Limpiar</button>
+          </div>
 
           {planet ? (
             <div className="mini-card">

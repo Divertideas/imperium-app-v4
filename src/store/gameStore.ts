@@ -103,6 +103,21 @@ export type GameState = {
       planetByNumber: nextPlanetByNumber
     }));
   },
+
+  unbindPlanetNumber: (planetId) => {
+    const s = get();
+    const planet = s.planets[planetId];
+    if (!planet) return;
+    const prevNumber = planet.number;
+    const nextPlanetByNumber = { ...s.planetByNumber } as Record<number, string>;
+    if (typeof prevNumber === 'number' && nextPlanetByNumber[prevNumber] === planetId) {
+      delete nextPlanetByNumber[prevNumber];
+    }
+    set((st) => ({
+      planets: { ...st.planets, [planetId]: { ...planet, number: undefined } },
+      planetByNumber: nextPlanetByNumber
+    }));
+  },
       ships: {},
       planets: {},
       characters: {},
