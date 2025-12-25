@@ -41,7 +41,15 @@ function PlanetNodesPanel({
     if (nextValue) {
       const currentEmpire = store.getCurrentEmpire();
       const owner = store.planets[planetId]?.owner ?? 'free';
-      const payEmpire: EmpireId = isEmpireId(owner) ? owner : currentEmpire;
+      const payEmpire: EmpireId | null = isEmpireId(owner)
+        ? owner
+        : (currentEmpire ?? null);
+
+      if (!payEmpire) {
+        setNotice('No hay un imperio activo para aplicar el coste del nodo.');
+        return;
+      }
+
       const credits = store.credits[payEmpire] ?? 0;
       if (credits < 1) {
         setNotice('No hay créditos suficientes para activar este nodo.');
