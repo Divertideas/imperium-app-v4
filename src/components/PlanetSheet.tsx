@@ -187,6 +187,18 @@ export function PlanetSheet(props: { planetId: string; mode?: 'full' | 'inline' 
       store.savePlanet(planetId, { number: undefined });
       return;
     }
+    // Planet numbers must be unique for the whole partida.
+    const existingId = store.planetByNumber[num];
+    if (existingId && existingId !== planetId) {
+      const existing = store.planets[existingId];
+      if (existing?.destroyedPermanently || existing?.owner === 'destroyed') {
+        setMsg('Este planeta está destruido permanentemente y su número no puede volver a usarse en la partida.');
+      } else {
+        setMsg('Ese número de planeta ya está registrado en la partida.');
+      }
+      return;
+    }
+    setMsg('');
     store.bindPlanetNumber(planetId, num);
   };
 

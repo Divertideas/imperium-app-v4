@@ -433,6 +433,10 @@ export const useGameStore = create<GameState>()(
         const s = get();
         const planet = s.planets[planetId];
         if (!planet) return;
+        // Enforce global uniqueness of planet numbers across the whole partida.
+        // If the number already belongs to another planet (including permanently destroyed), do nothing.
+        const existingId = s.planetByNumber[number];
+        if (existingId && existingId !== planetId) return;
         set((st) => ({
           planets: { ...st.planets, [planetId]: { ...planet, number } },
           planetByNumber: { ...st.planetByNumber, [number]: planetId }
